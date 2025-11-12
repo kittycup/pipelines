@@ -1,0 +1,46 @@
+pipeline {
+    agent { label 'builtinubuntu' }
+
+    tools {
+        maven 'maven 3.9.10'
+        jdk 'openjdk 21.0.7'
+    }
+
+    stages {
+        stage('fetch code') {
+            steps {
+                git branch: 'main' , url: 'https://github.com/hkhcoder/vprofile-project.git'
+            }
+        }
+
+        stage('unit test') {
+            steps {
+                sh 'mvn test'
+            }
+        }
+
+        stage('build the code') {
+            steps {
+                sh 'mvn package -DskipTests'
+            }
+        }
+
+        stage('archive the artifact') {
+            steps {
+                archiveArtifacts artifacts: '**/*.war', fingerprint: true
+            }
+        }
+
+        stage('deploy to staging') {
+            steps {
+                echo 'Deploying artifact to staging server.'
+            }
+        }
+    }
+
+    post {
+        failure {
+            sh 'echo "Build failed. Notifying the development team."'
+        }
+    }
+}
