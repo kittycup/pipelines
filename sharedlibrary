@@ -1,0 +1,19 @@
+@Library('shared-lib') _ 
+import com.mycompany.Helper
+
+pipeline {
+    agent any
+    stages {
+        stage('Build') { steps { echo 'Building...' } }
+        stage('Test') { steps { echo 'Testing...' } }
+    }
+    post {
+        success {
+            notifySlack("SUCCESS")
+            echo Helper.buildInfo(env.JOB_NAME, env.BUILD_NUMBER)
+        }
+        failure {
+            notifySlack("FAILURE")
+        }
+    }
+}
