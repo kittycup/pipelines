@@ -1,0 +1,51 @@
+pipeline {
+    agent { label 'builtinubuntu' }
+
+    environment {
+        IMAGE_NAME = "my-node-app"
+        CONTAINER_NAME = "nodeserver"
+        NODE_IMAGE = "node:22.19.0-alpine3.22" // Fixed Node version to avoid Docker pull issues
+    }
+
+    stages {
+        stage('Fetch Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/ajay-raut/spnodeserver.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    docker.build("${IMAGE_NAME}", "-f Dockerfile .")
+                }
+            }
+        }
+
+        stage('Run Container') {
+            steps {
+                script {
+                    // Run container in detached mode
+                    sh """
+                        docker run -d --name ${CONTAINER_NAME} -p 5000:5000 ${IMAGE_NAME}
+                        echo "Container started, waiting 10 seconds..."
+                        sleep 10
+                        echo "Currently running containers:"
+                        docker ps
+                        docker stop ${CONTAINER_NAME}
+                        docker rm ${CONTAINER_NAME}
+                        echo "Container stopped and removed."
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        failure {
+            mail to: 'sutarbhakti04@gmail.com',
+                 subject: "Jenkins Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "Check console output at ${env.BUILD_URL}"
+        }
+    }
+}
