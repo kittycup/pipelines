@@ -1,0 +1,52 @@
+pipeline {
+    agent { label 'builtinubuntu' }
+
+    environment {
+        DOCKER_IMAGE = 'bhaktisutar2004/my-node-app' // replace my-node-app with your image name
+    }
+
+    stages {
+        stage('Fetch Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/ajay-raut/spnodeserver.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
+                                                     usernameVariable: 'DOCKER_USERNAME',
+                                                     passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh "echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin"
+                        sh "docker build -t ${DOCKER_IMAGE}:latest ."
+                        sh "docker tag ${DOCKER_IMAGE}:latest ${DOCKER_IMAGE}:${env.BUILD_NUMBER}"
+                    }
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
+                                                     usernameVariable: 'DOCKER_USERNAME',
+                                                     passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh "echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin"
+                        sh "docker push ${DOCKER_IMAGE}:latest"
+                        sh "docker push ${DOCKER_IMAGE}:${env.BUILD_NUMBER}"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Docker image ${DOCKER_IMAGE}:${env.BUILD_NUMBER} pushed successfully!"
+        }
+        failure {
+            echo "Build or push failed. Check logs for details."
+        }
+    }
+}
