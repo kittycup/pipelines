@@ -1,0 +1,29 @@
+pipeline {
+    agent any   // no global agent
+
+    stages {
+        stage('Java Back-end Build') {
+            agent {
+                docker {
+                    image 'maven:3.9.11-eclipse-temurin-21-alpine'
+                }
+            }
+            steps {
+                echo "Running Maven inside Docker container..."
+                sh 'mvn -v'
+            }
+        }
+
+        stage('Node Front-end Build') {
+            agent {
+                docker {
+                    image 'node:22.19.0-alpine3.22'
+                }
+            }
+            steps {
+                echo "Running Node.js inside Docker container..."
+                sh 'node -v'
+            }
+        }
+    }
+}
