@@ -1,0 +1,47 @@
+def COLOR_MAP = [
+    'SUCCESS': 'good',
+    'FAILURE': 'danger',
+    'UNSTABLE': 'warning',
+]
+
+pipeline {
+    agent any
+    tools {
+        maven 'maven 3.9.10'
+        jdk   'openjdk 21.0.7'
+    }
+    stages {
+        stage ('fetch code') {
+            steps{
+                git branch: 'main' , url: 'https://github.com/hkhcoder/vprofile-project.git'
+            }
+        }
+        stage ('build the code') {
+            steps{
+                // Clean and package the code, skipping tests for this build step
+                sh 'mvn clean package -DskipTests'
+                
+                // Create the 'versions' directory if it doesn't exist
+                sh 'mkdir -p versions'
+                
+                // Copy the WAR file to the new directory with a timestamp and build ID
+                sh 'cp target/vprofile-v2.war versions/vprofile-V$BUILD_ID-$(date +%Y-%m-%d).war'
+            }
+        }
+        stage ('unit test') {
+            steps {
+                // Run unit tests
+                sh 'mvn test'
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'this is slack notification'
+            slackSend channel: '#ass',
+            color: COLOR_MAP[currentBuild.currentResult],
+            message: "*${currentBuild.currentResult}:* Job '${env.JOB_NAME} build ${env.BUILD_NUMBER} "
+        }
+    }
+}
